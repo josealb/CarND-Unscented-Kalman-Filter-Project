@@ -85,7 +85,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
   if (meas_package.sensor_type_==MeasurementPackage::RADAR)
   {
-      
+      UKF::UpdateRadar(meas_package);
   }
   if (meas_package.sensor_type_==MeasurementPackage::LASER)
   {
@@ -400,7 +400,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
         while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
         
         // state difference
-        VectorXd x_diff = Xsig_pred.col(i) - x;
+        VectorXd x_diff = Xsig_pred_.col(i) - x_;
         //angle normalization
         while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
         while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
@@ -419,8 +419,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
     
     //update state mean and covariance matrix
-    x = x + K * z_diff;
-    P = P - K*S*K.transpose();
+    x_ = x_ + K * z_diff;
+    P_ = P_ - K*S*K.transpose();
 
     
     
