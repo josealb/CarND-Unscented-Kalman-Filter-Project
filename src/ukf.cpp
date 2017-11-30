@@ -23,6 +23,9 @@ UKF::UKF() {
 
   // initial covariance matrix
   P_ = MatrixXd(5, 5);
+    
+  // initialize sigma point prediction matrix
+    Xsig_pred_ = MatrixXd(5, 15);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 30;
@@ -79,12 +82,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
-    
+  std::cout << "Measurement Arrived, Processing" << std::endl;
+
   double delta_t = meas_package.timestamp_-time_us_;
   UKF::Prediction(delta_t);
 
   if (meas_package.sensor_type_==MeasurementPackage::RADAR)
   {
+      std::cout << "It is a Radar measurement" << std::endl;
+
       UKF::UpdateRadar(meas_package);
   }
   if (meas_package.sensor_type_==MeasurementPackage::LASER)
@@ -111,7 +117,8 @@ void UKF::Prediction(double delta_t) {
     /*****************
      Generate Sigma Points
      *****************/
-    
+    std::cout << "Generating Sigma Points" << std::endl;
+
     //set state dimension
     int n_x = 5;
     
@@ -137,7 +144,8 @@ void UKF::Prediction(double delta_t) {
     /*****************
      Augment vector with noise estimation
      *****************/
-    
+    std::cout << "Augmenting with noise" << std::endl;
+
     //set augmented dimension
     int n_aug = 7;
     
@@ -184,7 +192,8 @@ void UKF::Prediction(double delta_t) {
     /*****************
      Predict new Sigma points
      *****************/
-    
+    std::cout << "Predicting New Sigma points" << std::endl;
+
     //create matrix with predicted sigma points as columns
     //No need to, it is already stored as a member variable
     
@@ -203,6 +212,9 @@ void UKF::Prediction(double delta_t) {
         //predicted state values
         double px_p, py_p;
         
+        std::cout << "Finished one loop" << i  <<std::endl;
+
+        
         //avoid division by zero
         if (fabs(yawd) > 0.001) {
             px_p = p_x + v/yawd * ( sin (yaw + yawd*delta_t) - sin(yaw));
@@ -217,6 +229,9 @@ void UKF::Prediction(double delta_t) {
         double yaw_p = yaw + yawd*delta_t;
         double yawd_p = yawd;
         
+        std::cout << "Finished one loop" << std::endl;
+
+        
         //add noise
         px_p = px_p + 0.5*nu_a*delta_t*delta_t * cos(yaw);
         py_p = py_p + 0.5*nu_a*delta_t*delta_t * sin(yaw);
@@ -225,14 +240,21 @@ void UKF::Prediction(double delta_t) {
         yaw_p = yaw_p + 0.5*nu_yawdd*delta_t*delta_t;
         yawd_p = yawd_p + nu_yawdd*delta_t;
         
+        std::cout << "Finished one loop" << std::endl;
+
+        
         //write predicted sigma point into right column
         Xsig_pred_(0,i) = px_p;
         Xsig_pred_(1,i) = py_p;
         Xsig_pred_(2,i) = v_p;
         Xsig_pred_(3,i) = yaw_p;
         Xsig_pred_(4,i) = yawd_p;
+        
+        std::cout << "Finished one loop" << std::endl;
+
     }
-    
+    std::cout << "Finished predicting new sigma points" << std::endl;
+
     
     // set weights
     //create vector for weights
@@ -244,7 +266,8 @@ void UKF::Prediction(double delta_t) {
         double weight = 0.5/(n_aug+lambda);
         weights(i) = weight;
     }
-    
+    std::cout << "Predicting New State Mean and covariance" << std::endl;
+
     //predicted state mean
     x_.fill(0.0);
     for (int i = 0; i < 2 * n_aug + 1; i++) {  //iterate over sigma points
@@ -298,6 +321,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   You'll also need to calculate the radar NIS.
   */
     //set state dimension
+    std::cout << "Predicting radar measurement" << std::endl;
+
+    
     int n_x = 5;
     
     //set augmented dimension
@@ -330,7 +356,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     //create matrix for sigma points in measurement space
     MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug + 1);
     
-    
+    std::cout << "Transforming Sigma Points into measurement space" << std::endl;
+
     //transform sigma points into measurement space
     for (int i = 0; i < 2 * n_aug + 1; i++) {  //2n+1 simga points
         
@@ -349,6 +376,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
         Zsig(2,i) = (p_x*v1 + p_y*v2 ) / sqrt(p_x*p_x + p_y*p_y);   //r_dot
     }
     
+    std::cout << "Extracting mean predicted measurement and covariance matrix" << std::endl;
+
     //mean predicted measurement
     VectorXd z_pred = VectorXd(n_z);
     z_pred.fill(0.0);
@@ -388,7 +417,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     /*******************************************************************************
      * Student part begin
      ******************************************************************************/
-    
+    std::cout << "Updating state with new measurement" << std::endl;
+
+
     //calculate cross correlation matrix
     Tc.fill(0.0);
     for (int i = 0; i < 2 * n_aug + 1; i++) {  //2n+1 simga points
