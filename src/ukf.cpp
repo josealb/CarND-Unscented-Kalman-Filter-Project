@@ -50,6 +50,8 @@ UKF::UKF() {
 
   // Parameters above this line are scaffolding, do not modify
   time_us_ = 0; //TODO: update this to fill with timestamp of reading
+
+  is_initialized_ = false;
   
   /**
   TODO:
@@ -76,6 +78,67 @@ UKF::~UKF() {}
  * either radar or laser.
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
+/*****************************************************************************
+   *  Initialization
+   ****************************************************************************/
+  if (!is_initialized_) {
+    /**
+    TODO:
+      * Initialize the state ekf_.x_ with the first measurement.
+      * Create the covariance matrix.
+      * Remember: you'll need to convert radar from polar to cartesian coordinates.
+    */
+    // first measurement
+    cout << "UKF: " << endl;
+    //x_ << 1, 1, 1, 1, 1;
+
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      /**
+      Convert radar from polar to cartesian coordinates and initialize state.
+      */
+        cout << "Initializing with Radar packet: " << endl;
+
+        double rho = meas_package.raw_measurements_[0];
+        double phi = meas_package.raw_measurements_[1];
+        double rho_dot = meas_package.raw_measurements_[2];
+
+        double px = rho * cos(phi);
+        double py = rho * sin(phi);
+        double vel_abs = 1;
+        double yaw_angle = phi;
+        double yaw_rate = 1;
+
+        x_ << px, py, vel_abs, yaw_angle, yaw_rate;
+
+    }
+    else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+        /**
+         Initialize state.
+        */
+
+        cout << "Initializing with Laser packet: " << endl;
+
+        double px = meas_package.raw_measurements_[0];
+        double py = meas_package.raw_measurements_[1];
+        double yaw_angle = atan2 (px,py);
+
+        x_ << px, py, 1, yaw_angle, 1;
+
+
+    }
+
+    // done initializing, no need to predict or update
+      
+    time_us_ = meas_package.timestamp_;
+    is_initialized_ = true;
+
+    return;
+      
+  }
+
+
+
+
   /**
   TODO:
 
@@ -132,6 +195,8 @@ void UKF::Prediction(double delta_t) {
     MatrixXd A = P_.llt().matrixL();
     
     //set first column of sigma point matrix
+    std::cout << "Predicted mean x_ " << x_ << std::endl;
+
     Xsig.col(0)  = x_;
     
     //set remaining sigma points
@@ -140,6 +205,9 @@ void UKF::Prediction(double delta_t) {
         Xsig.col(i+1)     = x_ + sqrt(lambda+n_x) * A.col(i);
         Xsig.col(i+1+n_x) = x_ - sqrt(lambda+n_x) * A.col(i);
     }
+
+    std::cout << "Sigma points generated: " << std::endl << Xsig << std::endl;
+
     
     /*****************
      Augment vector with noise estimation
@@ -212,7 +280,7 @@ void UKF::Prediction(double delta_t) {
         //predicted state values
         double px_p, py_p;
         
-        std::cout << "Finished one loop" << i  <<std::endl;
+        //std::cout << "Finished one loop" << i  <<std::endl;
 
         
         //avoid division by zero
@@ -273,7 +341,8 @@ void UKF::Prediction(double delta_t) {
     for (int i = 0; i < 2 * n_aug + 1; i++) {  //iterate over sigma points
         x_ = x_+ weights(i) * Xsig_pred_.col(i);
     }
-    
+        std::cout << "Finished predicting mean" << std::endl;
+
     //predicted state covariance matrix
     P_.fill(0.0);
     for (int i = 0; i < 2 * n_aug + 1; i++) {  //iterate over sigma points
@@ -281,12 +350,24 @@ void UKF::Prediction(double delta_t) {
         // state difference
         VectorXd x_diff = Xsig_pred_.col(i) - x_;
         //angle normalization
-        while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
-        while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
-        
+        std::cout << "Starting Angle normalization" << std::endl;
+
+        std::cout << "x_diff(3)" << x_diff(3) << std::endl;
+        while (x_diff(3)> M_PI) {
+            x_diff(3)-=2.*M_PI;
+            //std::cout << "x_diff(3)" << x_diff(3) << std::endl;
+
+        }
+        while (x_diff(3)<-M_PI){
+            x_diff(3)+=2.*M_PI;
+            //std::cout << "x_diff(3)" << x_diff(3) << std::endl;
+        } 
+        std::cout << "Finished angle normalization" << std::endl;
+
         P_ = P_ + weights(i) * x_diff * x_diff.transpose() ;
     }
-    
+    std::cout << "Finished predicting covariance" << std::endl;
+
 
     
     
