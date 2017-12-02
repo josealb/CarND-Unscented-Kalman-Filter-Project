@@ -68,7 +68,9 @@ UKF::UKF() {
     0.0,
     0.0;
     
-    P_ = MatrixXd::Identity(5, 5);
+    //P_ = MatrixXd::Identity(5, 5);
+    P_.fill(0.0);
+
 }
 
 UKF::~UKF() {}
@@ -147,14 +149,14 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   */
   std::cout << "Measurement Arrived, Processing" << std::endl;
 
-  double delta_t = meas_package.timestamp_-time_us_;
-  UKF::Prediction(delta_t);
+
 
   if (meas_package.sensor_type_==MeasurementPackage::RADAR)
   {
-      std::cout << "It is a Radar measurement" << std::endl;
-
-      UKF::UpdateRadar(meas_package);
+    std::cout << "It is a Radar measurement" << std::endl;
+    double delta_t = (meas_package.timestamp_-time_us_)/1e6;
+    UKF::Prediction(delta_t);
+    UKF::UpdateRadar(meas_package);
   }
   if (meas_package.sensor_type_==MeasurementPackage::LASER)
   {
@@ -195,9 +197,12 @@ void UKF::Prediction(double delta_t) {
     MatrixXd A = P_.llt().matrixL();
     
     //set first column of sigma point matrix
-    std::cout << "Predicted mean x_ " << x_ << std::endl;
+    std::cout << "Previously predicted mean x_ " << x_ << std::endl;
 
     Xsig.col(0)  = x_;
+
+    std::cout << "Previously predicted covariance matrix P " << P_ << std::endl;
+
     
     //set remaining sigma points
     for (int i = 0; i < n_x; i++)
@@ -256,6 +261,15 @@ void UKF::Prediction(double delta_t) {
         Xsig_aug.col(i+1)       = x_aug + sqrt(lambda+n_aug) * L.col(i);
         Xsig_aug.col(i+1+n_aug) = x_aug - sqrt(lambda+n_aug) * L.col(i);
     }
+
+    std::cout << "Finished augmenting with noise" << std::endl;
+    std::cout << "Augmented mean state vector: " << std::endl;
+    std::cout << x_aug << std::endl;
+    
+    std::cout << "Augmented covariance matrix: " << std::endl;
+    std::cout << P_aug << std::endl;
+
+
     
     /*****************
      Predict new Sigma points
@@ -297,7 +311,6 @@ void UKF::Prediction(double delta_t) {
         double yaw_p = yaw + yawd*delta_t;
         double yawd_p = yawd;
         
-        std::cout << "Finished one loop" << std::endl;
 
         
         //add noise
@@ -308,8 +321,6 @@ void UKF::Prediction(double delta_t) {
         yaw_p = yaw_p + 0.5*nu_yawdd*delta_t*delta_t;
         yawd_p = yawd_p + nu_yawdd*delta_t;
         
-        std::cout << "Finished one loop" << std::endl;
-
         
         //write predicted sigma point into right column
         Xsig_pred_(0,i) = px_p;
@@ -318,10 +329,10 @@ void UKF::Prediction(double delta_t) {
         Xsig_pred_(3,i) = yaw_p;
         Xsig_pred_(4,i) = yawd_p;
         
-        std::cout << "Finished one loop" << std::endl;
 
     }
     std::cout << "Finished predicting new sigma points" << std::endl;
+    std::cout << Xsig_pred_ << std::endl;
 
     
     // set weights
@@ -341,7 +352,8 @@ void UKF::Prediction(double delta_t) {
     for (int i = 0; i < 2 * n_aug + 1; i++) {  //iterate over sigma points
         x_ = x_+ weights(i) * Xsig_pred_.col(i);
     }
-        std::cout << "Finished predicting mean" << std::endl;
+    std::cout << "Finished predicting mean" << std::endl;
+    std::cout << x_ << std::endl;
 
     //predicted state covariance matrix
     P_.fill(0.0);
@@ -350,24 +362,22 @@ void UKF::Prediction(double delta_t) {
         // state difference
         VectorXd x_diff = Xsig_pred_.col(i) - x_;
         //angle normalization
-        std::cout << "Starting Angle normalization" << std::endl;
 
-        std::cout << "x_diff(3)" << x_diff(3) << std::endl;
         while (x_diff(3)> M_PI) {
             x_diff(3)-=2.*M_PI;
-            //std::cout << "x_diff(3)" << x_diff(3) << std::endl;
+            std::cout << "Need to normalize angle because it is > 2*Pi" << std::endl;
+            std::cout << "x_diff(3)" << x_diff(3) << std::endl;
 
         }
         while (x_diff(3)<-M_PI){
             x_diff(3)+=2.*M_PI;
-            //std::cout << "x_diff(3)" << x_diff(3) << std::endl;
+            std::cout << "Need to normalize angle because it is > 2*Pi" << std::endl;
+            std::cout << "x_diff(3)" << x_diff(3) << std::endl;
         } 
-        std::cout << "Finished angle normalization" << std::endl;
-
         P_ = P_ + weights(i) * x_diff * x_diff.transpose() ;
     }
     std::cout << "Finished predicting covariance" << std::endl;
-
+    std::cout << P_ << std::endl;
 
     
     
