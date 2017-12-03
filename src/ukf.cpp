@@ -28,10 +28,10 @@ UKF::UKF() {
     Xsig_pred_ = MatrixXd(5, 15);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 5;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 5;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -107,7 +107,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
         double px = rho * cos(phi);
         double py = rho * sin(phi);
         double vel_abs = 1;
-        double yaw_angle = phi;
+        double yaw_angle = 0;
         double yaw_rate = 1;
 
         x_ << px, py, vel_abs, yaw_angle, yaw_rate;
@@ -122,9 +122,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
         double px = meas_package.raw_measurements_[0];
         double py = meas_package.raw_measurements_[1];
-        double yaw_angle = atan2 (px,py);
+        //double yaw_angle = atan2 (px,py);
 
-        x_ << px, py, 1, yaw_angle, 1;
+        x_ << px, py, 1, 0, 1;
 
 
     }
@@ -138,9 +138,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       
   }
 
-
-
-
   /**
   TODO:
 
@@ -149,19 +146,20 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   */
   std::cout << "Measurement Arrived, Processing" << std::endl;
 
-
-
   if (meas_package.sensor_type_==MeasurementPackage::RADAR)
   {
     std::cout << "It is a Radar measurement" << std::endl;
     double delta_t = (meas_package.timestamp_-time_us_)/1e6;
     UKF::Prediction(delta_t);
     UKF::UpdateRadar(meas_package);
+    time_us_=meas_package.timestamp_;
+
   }
   if (meas_package.sensor_type_==MeasurementPackage::LASER)
   {
       //do
   }
+
 }
     
 
