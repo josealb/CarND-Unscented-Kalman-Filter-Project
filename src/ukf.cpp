@@ -51,6 +51,9 @@ UKF::UKF() {
   // Parameters above this line are scaffolding, do not modify
   time_us_ = 0; //TODO: update this to fill with timestamp of reading
 
+  // Previous Zk+1, for calculation of NIS
+  previous_zkp1=VectorXd(5);
+
   is_initialized_ = false;
   
   /**
@@ -67,9 +70,15 @@ UKF::UKF() {
     0.0,
     0.0,
     0.0;
+
+    previous_zkp1 << 0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0;
     
-    //P_ = MatrixXd::Identity(5, 5);
-    P_.fill(1.0);
+    P_ = MatrixXd::Identity(5, 5);
+    //P_.fill(1.0);
 
 }
 
@@ -529,9 +538,10 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     x_ = x_ + K * z_diff;
     P_ = P_ - K*S*K.transpose();
 
+    VectorXd predictionError = x_ - previous_zkp1; 
 
-
-
+    double NIS = predictionError.transpose()*S.inverse()*predictionError;
+    std::cout << "NIS: " << NIS <<std::endl;
 }
 
 /**
