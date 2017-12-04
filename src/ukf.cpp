@@ -25,7 +25,7 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
     
   // initialize sigma point prediction matrix
-    Xsig_pred_ = MatrixXd(5, 15);
+  Xsig_pred_ = MatrixXd(5, 15);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
   std_a_ = 5;
@@ -69,7 +69,7 @@ UKF::UKF() {
     0.0;
     
     //P_ = MatrixXd::Identity(5, 5);
-    P_.fill(0.0);
+    P_.fill(1.0);
 
 }
 
@@ -106,9 +106,10 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
         double px = rho * cos(phi);
         double py = rho * sin(phi);
-        double vel_abs = 1;
+        double vel_abs = rho_dot;//This is incorrect, since vel_abs is vehicles velocity and rho_dot is vehicles radial velocity with resect to us, still good approximation
         double yaw_angle = 0;
         double yaw_rate = 1;
+        
 
         x_ << px, py, vel_abs, yaw_angle, yaw_rate;
 
@@ -157,7 +158,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   }
   if (meas_package.sensor_type_==MeasurementPackage::LASER)
   {
-      //do
+    std::cout << "It is a Laser measurement" << std::endl;
+    double delta_t = (meas_package.timestamp_-time_us_)/1e6;
+    UKF::Prediction(delta_t);
+    UKF::UpdateLidar(meas_package);
+    time_us_=meas_package.timestamp_;
   }
 
 }
@@ -394,6 +399,139 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the lidar NIS.
   */
+
+    //set state dimension
+    std::cout << "Predicting Laser measurement" << std::endl;
+
+    int n_x = 5;
+    
+    //set augmented dimension
+    int n_aug = 7;
+    
+    //set measurement dimension, radar can measure px, py
+    int n_z = 2;
+    
+    //define spreading parameter
+    double lambda = 3 - n_aug;
+    
+    //set vector for weights
+    VectorXd weights = VectorXd(2*n_aug+1);
+    double weight_0 = lambda/(lambda+n_aug);
+    weights(0) = weight_0;
+    for (int i=1; i<2*n_aug+1; i++) {
+        double weight = 0.5/(n_aug+lambda);
+        weights(i) = weight;
+    }
+    
+    //radar measurement noise standard deviation radius in m
+    double std_laspx = std_laspx_;  
+    
+    //radar measurement noise standard deviation angle in rad
+    double std_laspy = std_laspy_;
+    
+
+    //create matrix for sigma points in measurement space
+    MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug + 1);
+    
+    std::cout << "Transforming Sigma Points into measurement space" << std::endl;
+
+    //transform sigma points into measurement space
+    for (int i = 0; i < 2 * n_aug + 1; i++) {  //2n+1 simga points
+        
+        // extract values for better readibility
+        double p_x = Xsig_pred_(0,i);
+        double p_y = Xsig_pred_(1,i);
+        double v  = Xsig_pred_(2,i);
+        double yaw = Xsig_pred_(3,i);
+        
+        double v1 = cos(yaw)*v;
+        double v2 = sin(yaw)*v;
+        
+        // measurement model
+        Zsig(0,i) = p_x;                        //r
+        Zsig(1,i) = p_y;                                 //phi
+        
+    }
+    
+    std::cout << "Extracting mean predicted measurement and covariance matrix" << std::endl;
+
+    //mean predicted measurement
+    VectorXd z_pred = VectorXd(n_z);
+    z_pred.fill(0.0);
+    for (int i=0; i < 2*n_aug+1; i++) {
+        z_pred = z_pred + weights(i) * Zsig.col(i);
+    }
+    
+    //measurement covariance matrix S
+    MatrixXd S = MatrixXd(n_z,n_z);
+    S.fill(0.0);
+    for (int i = 0; i < 2 * n_aug + 1; i++) {  //2n+1 simga points
+        //residual
+        VectorXd z_diff = Zsig.col(i) - z_pred;
+        
+        //angle normalization
+        while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+        while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+        
+        S = S + weights(i) * z_diff * z_diff.transpose();
+    }
+    
+    //add measurement noise covariance matrix
+    MatrixXd R = MatrixXd(n_z,n_z);
+    R <<    std_laspx*std_laspx, 0,
+    0, std_laspy*std_laspy;
+    S = S + R;
+    
+
+    //create example vector for incoming radar measurement
+    VectorXd z = meas_package.raw_measurements_;
+
+    
+    //create matrix for cross correlation Tc
+    MatrixXd Tc = MatrixXd(n_x, n_z);
+    
+    /*******************************************************************************
+     * Student part begin
+     ******************************************************************************/
+    std::cout << "Updating state with new measurement" << std::endl;
+
+
+    //calculate cross correlation matrix
+    Tc.fill(0.0);
+    for (int i = 0; i < 2 * n_aug + 1; i++) {  //2n+1 simga points
+        
+        //residual
+        VectorXd z_diff = Zsig.col(i) - z_pred;
+        //angle normalization
+        while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+        while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+        
+        // state difference
+        VectorXd x_diff = Xsig_pred_.col(i) - x_;
+        //angle normalization
+        while (x_diff(3)> M_PI) x_diff(3)-=2.*M_PI;
+        while (x_diff(3)<-M_PI) x_diff(3)+=2.*M_PI;
+        
+        Tc = Tc + weights(i) * x_diff * z_diff.transpose();
+    }
+    
+    //Kalman gain K;
+    MatrixXd K = Tc * S.inverse();
+    
+    //residual
+    VectorXd z_diff = z - z_pred;
+    
+    //angle normalization
+    while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
+    while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
+    
+    //update state mean and covariance matrix
+    x_ = x_ + K * z_diff;
+    P_ = P_ - K*S*K.transpose();
+
+
+
+
 }
 
 /**
@@ -412,7 +550,6 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     //set state dimension
     std::cout << "Predicting radar measurement" << std::endl;
 
-    
     int n_x = 5;
     
     //set augmented dimension
@@ -434,13 +571,13 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     }
     
     //radar measurement noise standard deviation radius in m
-    double std_radr = 0.3;
+    double std_radr = std_radr_;  
     
     //radar measurement noise standard deviation angle in rad
-    double std_radphi = 0.0175;
+    double std_radphi = std_radphi_;
     
     //radar measurement noise standard deviation radius change in m/s
-    double std_radrd = 0.1;
+    double std_radrd = std_radrd_;
 
     //create matrix for sigma points in measurement space
     MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug + 1);
@@ -542,6 +679,4 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     x_ = x_ + K * z_diff;
     P_ = P_ - K*S*K.transpose();
 
-    
-    
 }
