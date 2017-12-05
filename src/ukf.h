@@ -24,7 +24,11 @@ public:
 
   ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
   VectorXd x_;
-  VectorXd previous_zkp1;
+  VectorXd previous_zkp1_radar;
+  VectorXd previous_zkp1_laser;
+  double expected_laser_nis_;
+  double expected_radar_nis_;
+
 
 
   ///* state covariance matrix
