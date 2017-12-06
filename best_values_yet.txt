@@ -1,0 +1,38 @@
+With covariance Matrix filled with 1
+
+Px: 0.1071
+Py: 0.0983
+Vx: 0.5263
+vy: 0.3685
+
+With covariance Matrix = Identity
+
+Px: 0.0846
+Py: 0.1045
+Vx: 0.7434
+vy: 0.3778
+
+Adapting process noise for NIS
+
+Px: 0.0796
+Py: 0.1035
+Vx: 0.4434
+Vy: 0.7283
+
+With std_a and std_yawdd of 2
+
+Px: 0.0700
+Py: 0.0921
+Vx: 0.2901
+Vy: 0.5552
+
+Best values, by initialising speed at zero again
+
+Px: 0.0701
+Py: 0.0857
+Vx: 0.3557
+Vy: 0.2539
+
+Thresholds for passing
+
+ [.09, .10, .40, .30].

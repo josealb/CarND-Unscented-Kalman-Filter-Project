@@ -717,7 +717,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
     double NIS = predictionError.transpose()*S.inverse()*predictionError;
     std::cout << "Radar NIS: " << NIS <<std::endl;
-/*     if (NIS>expected_radar_nis_)
+/*      if (NIS>expected_radar_nis_)
     {
         std_a_ += 0.1;
         std_yawdd_ += 0.1;
@@ -726,7 +726,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     {
         std_a_ -= 0.1;
         std_yawdd_ -= 0.1;
-    } */
+    }  */
     std::cout << "std_a_ : " << std_a_ <<std::endl;
     std::cout << "std_yawdd_ : " << std_yawdd_ <<std::endl;
 
