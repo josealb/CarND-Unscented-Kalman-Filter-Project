@@ -32,10 +32,10 @@ UKF::UKF() {
   expected_radar_nis_=4;
   //std_a_ = 5; //original, now will change according to NIS
   //Value used for both was actually 0.2
-  std_a_ = 2;
+  std_a_ = 0.2;
   // Process noise standard deviation yaw acceleration in rad/s^2
   //std_yawdd_ = 5;
-  std_yawdd_ = 10.4;
+  std_yawdd_ = 0.2;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -141,9 +141,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
         double py = meas_package.raw_measurements_[1];
         //double yaw_angle = atan2 (px,py);
 
-        x_ << px, py, 5, 0, 1;
-
-
+        x_ << px, py, 5, 0, 0;
     }
 
     // done initializing, no need to predict or update
