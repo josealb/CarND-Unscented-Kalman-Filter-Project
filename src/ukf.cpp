@@ -32,10 +32,10 @@ UKF::UKF() {
   expected_radar_nis_=4;
   //std_a_ = 5; //original, now will change according to NIS
   //Value used for both was actually 0.2
-  std_a_ = 0.2;
+  std_a_ = 2;
   // Process noise standard deviation yaw acceleration in rad/s^2
   //std_yawdd_ = 5;
-  std_yawdd_ = 0.2;
+  std_yawdd_ = 2;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -141,7 +141,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
         double py = meas_package.raw_measurements_[1];
         //double yaw_angle = atan2 (px,py);
 
-        x_ << px, py, 5, 0, 0;
+        x_ << px, py, 0, 0, 0;
     }
 
     // done initializing, no need to predict or update
@@ -550,7 +550,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
     double NIS = predictionError.transpose()*S.inverse()*predictionError;
     std::cout << "Laser NIS: " << NIS <<std::endl;
-    if (NIS>expected_laser_nis_)
+    /* if (NIS>expected_laser_nis_)
     {
         std_a_ += 0.1;
         std_yawdd_ += 0.1;
@@ -559,7 +559,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     {
         std_a_ -= 0.1;
         std_yawdd_ -= 0.1;
-    }
+    } */
     std::cout << "std_a_ : " << std_a_ <<std::endl;
     std::cout << "std_yawdd_ : " << std_yawdd_ <<std::endl;
     previous_zkp1_laser = z_pred;
@@ -717,7 +717,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
     double NIS = predictionError.transpose()*S.inverse()*predictionError;
     std::cout << "Radar NIS: " << NIS <<std::endl;
-    if (NIS>expected_radar_nis_)
+/*     if (NIS>expected_radar_nis_)
     {
         std_a_ += 0.1;
         std_yawdd_ += 0.1;
@@ -726,7 +726,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     {
         std_a_ -= 0.1;
         std_yawdd_ -= 0.1;
-    }
+    } */
     std::cout << "std_a_ : " << std_a_ <<std::endl;
     std::cout << "std_yawdd_ : " << std_yawdd_ <<std::endl;
 
